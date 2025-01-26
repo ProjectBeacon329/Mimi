@@ -65,3 +65,4 @@ By providing Mimi's Cookiez with a detailed and dynamic understanding of costs a
 Improve decision-making for pricing strategies.
 Enhance profitability by identifying inefficiencies.
 Save time through automation, enabling Mimi to focus on scaling the business and delighting customers.
+"# Mimi" 
