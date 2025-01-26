@@ -2,20 +2,29 @@ from flask import Flask, request, jsonify
 import pandas as pd
 from cost_model import CostModel
 import logging
-import os
+import requests
+from io import StringIO
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
 
-# Initialize the cost model with ingredients data
-INGREDIENTS_PATH = r'C:\Users\adamy\OneDrive\Desktop\Project Mercury\Data\ingredients.csv'
+# GitHub raw file URL for ingredients
+INGREDIENTS_URL = "https://raw.githubusercontent.com/ProjectBeacon329/Project-Mercury/refs/heads/main/ingredients.csv?token=GHSAT0AAAAAAC5475FNUWCEL3KSFSTWFCVAZ4V2BVA"
+
 cost_model = None
 
 try:
-    cost_model = CostModel(INGREDIENTS_PATH)
-    logging.info("Cost model initialized successfully")
+    # Fetch ingredients data from GitHub
+    response = requests.get(INGREDIENTS_URL)
+    if response.status_code == 200:
+        # Convert the response content to a StringIO object that pandas can read
+        ingredients_data = StringIO(response.text)
+        cost_model = CostModel(ingredients_data, is_url=True)
+        logging.info("Cost model initialized successfully with GitHub data")
+    else:
+        raise Exception(f"Failed to fetch ingredients data: HTTP {response.status_code}")
 except Exception as e:
     logging.error(f"Failed to initialize cost model: {str(e)}")
 

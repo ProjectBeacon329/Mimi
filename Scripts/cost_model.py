@@ -1,5 +1,7 @@
 import pandas as pd
 import logging
+import requests
+from io import StringIO
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -90,21 +92,61 @@ def perform_sensitivity_analysis(ingredients_data, recipe_requirements, batch_si
     return results
 
 class CostModel:
-    def __init__(self, ingredients_path, default_batch_size=12, default_margin=3.00):
-        """Initialize the cost model with data and default values."""
+    def __init__(self, ingredients_source, recipe_source=None, is_url=False, default_batch_size=12, default_margin=3.00):
+        """
+        Initialize the cost model with data and default values.
+        
+        Args:
+            ingredients_source: Either a file path or StringIO object containing ingredients data
+            recipe_source: Either a file path or URL to recipe data
+            is_url (bool): If True, sources are treated as URLs
+            default_batch_size (int): Default batch size for calculations
+            default_margin (float): Default margin for price calculations
+        """
         self.default_batch_size = default_batch_size
         self.default_margin = default_margin
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        })
+        
         try:
-            self.ingredients_df = pd.read_csv(ingredients_path, skipinitialspace=True)
-            logging.info(f"Successfully loaded ingredients data from {ingredients_path}")
+            if is_url and isinstance(ingredients_source, str):
+                response = self.session.get(ingredients_source)
+                if response.status_code != 200:
+                    raise Exception(f"Failed to fetch ingredients data: HTTP {response.status_code}")
+                ingredients_data = StringIO(response.text)
+                self.ingredients_df = pd.read_csv(ingredients_data, skipinitialspace=True)
+            else:
+                self.ingredients_df = pd.read_csv(ingredients_source, skipinitialspace=True)
+            logging.info("Successfully loaded ingredients data")
+            
+            if recipe_source:
+                if is_url:
+                    response = self.session.get(recipe_source)
+                    if response.status_code != 200:
+                        raise Exception(f"Failed to fetch recipe data: HTTP {response.status_code}")
+                    recipe_data = StringIO(response.text)
+                    self.recipe_df = pd.read_csv(recipe_data, skipinitialspace=True)
+                else:
+                    self.recipe_df = pd.read_csv(recipe_source, skipinitialspace=True)
+                logging.info("Successfully loaded recipe data")
         except Exception as e:
-            logging.error(f"Error loading ingredients data: {str(e)}")
+            logging.error(f"Error loading data: {str(e)}")
             raise
 
     def calculate_recipe_costs(self, recipe_path):
         """Calculate costs for a specific recipe."""
         try:
-            recipe_df = pd.read_csv(recipe_path, skipinitialspace=True)
+            if recipe_path.startswith('http'):
+                response = self.session.get(recipe_path)
+                if response.status_code != 200:
+                    raise Exception(f"Failed to fetch recipe data: HTTP {response.status_code}")
+                recipe_data = StringIO(response.text)
+                recipe_df = pd.read_csv(recipe_data, skipinitialspace=True)
+            else:
+                recipe_df = pd.read_csv(recipe_path, skipinitialspace=True)
             logging.info(f"Successfully loaded recipe from {recipe_path}")
             
             costs = calculate_cost_per_batch(self.ingredients_df, recipe_df, self.default_batch_size)
@@ -122,7 +164,14 @@ class CostModel:
     def run_sensitivity_analysis(self, recipe_path):
         """Run sensitivity analysis on the recipe."""
         try:
-            recipe_df = pd.read_csv(recipe_path, skipinitialspace=True)
+            if recipe_path.startswith('http'):
+                response = self.session.get(recipe_path)
+                if response.status_code != 200:
+                    raise Exception(f"Failed to fetch recipe data: HTTP {response.status_code}")
+                recipe_data = StringIO(response.text)
+                recipe_df = pd.read_csv(recipe_data, skipinitialspace=True)
+            else:
+                recipe_df = pd.read_csv(recipe_path, skipinitialspace=True)
             sensitivity_results = perform_sensitivity_analysis(
                 self.ingredients_df, 
                 recipe_df
@@ -164,13 +213,13 @@ class CostModel:
             raise
 
 def main():
-    # Example usage
-    ingredients_path = r'C:\Users\adamy\OneDrive\Desktop\Project Mercury\Data\ingredients.csv'
-    recipe_path = r'C:\Users\adamy\OneDrive\Desktop\Project Mercury\Data\recipe.csv'
+    # GitHub raw file URLs
+    ingredients_url = "https://raw.githubusercontent.com/ProjectBeacon329/Project-Mercury/refs/heads/main/ingredients.csv"
+    recipe_url = "https://raw.githubusercontent.com/ProjectBeacon329/Project-Mercury/refs/heads/main/recipe.csv"
     
     try:
-        model = CostModel(ingredients_path)
-        model.print_analysis(recipe_path)
+        model = CostModel(ingredients_url, recipe_url, is_url=True)
+        model.print_analysis(recipe_url)
     except Exception as e:
         logging.error(f"Main execution failed: {str(e)}")
 
