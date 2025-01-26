@@ -1,4 +1,4 @@
-# Project-Mercury
+mina# Project-Mercury
 Webapp for Mimi's Cookiez
 This project is dedicated to helping Mimi's Cookiez, a local bakery specializing in gourmet delicacies, optimize its operations by building a dynamic cost and pricing model. Mimi’s Cookiez offers a variety of baked goods, including specialty cookies, traditional cookies, brownies, and trendy items like croissant cookies and Dubai chocolate bars. By leveraging high-quality ingredients, Mimi ensures premium products, but this also presents challenges in maintaining optimal profit margins.
 
